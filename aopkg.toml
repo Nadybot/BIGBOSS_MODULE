@@ -1,0 +1,7 @@
+name = "BIGBOSS_MODULE"
+description = "Keep track of spawntimers for world bosses"
+github = "Nadybot/BIGBOSS_MODULE"
+version = "1.0.0"
+author = "Nadyita"
+bot_type = "Nadybot"
+bot_version = "^5.0.0-beta1"
