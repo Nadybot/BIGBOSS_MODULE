@@ -180,7 +180,7 @@ class BigBossController {
 			'mod',
 			'tara.txt'
 		);
-		$this->db->loadSQLFile($this->moduleName, 'bigboss_timers');
+		$this->db->loadMigrations($this->moduleName, __DIR__ . '/Migrations');
 	}
 
 	/**
@@ -202,9 +202,11 @@ class BigBossController {
 	}
 
 	protected function getBigBossTimer(string $mobName): ?BigbossTimer {
-		$sql = "SELECT * FROM bigboss_timers WHERE mob_name = ?";
 		/** @var BigbossTimer[] */
-		$timers = $this->db->fetchAll(BigbossTimer::class, $sql, $mobName);
+		$timers = $this->db->table("bigboss_timers")
+			->where("mob_name", $mobName)
+			->asObj(BigbossTimer::class)
+			->toArray();
 		if (!count($timers)) {
 			return null;
 		}
@@ -216,9 +218,10 @@ class BigBossController {
 	 * @return BigbossTimer[]
 	 */
 	protected function getBigBossTimers(): array {
-		$sql = "SELECT * FROM bigboss_timers";
 		/** @var BigbossTimer[] */
-		$timers = $this->db->fetchAll(BigbossTimer::class, $sql);
+		$timers = $this->db->table("bigboss_timers")
+			->asObj(BigbossTimer::class)
+			->toArray();
 		$this->addNextDates($timers);
 		return $timers;
 	}
@@ -238,7 +241,6 @@ class BigBossController {
 			$times[] = $this->niceTime($spawnTime);
 		}
 		$msg = "Timer updated".
-				" by <highlight>".$timer->submitter_name."<end>".
 				" at <highlight>".$this->niceTime($timer->time_submitted)."<end>.\n\n".
 				"<tab>- ".join("\n\n<tab>- ", $times);
 		return $msg;
@@ -278,76 +280,51 @@ class BigBossController {
 	}
 
 	public function bigBossDeleteCommand(string $sender, string $mobName): string {
-		if ($this->db->exec("DELETE FROM bigboss_timers WHERE mob_name = ?", $mobName) === 0) {
+		if ($this->db->table("bigboss_timers")
+			->where("mob_name", $mobName)
+			->delete() === 0
+		) {
 			return "There is currently no timer for <highlight>$mobName<end>.";
 		}
 		return "The timer for <highlight>$mobName<end> has been deleted.";
 	}
 
 	public function bigBossKillCommand(string $sender, string $mobName, int $timeUntilSpawn, int $timeUntilKillable): string {
-		if ($this->getBigBossTimer($mobName) !== null) {
-			$this->db->exec(
-				"UPDATE bigboss_timers SET ".
-				"timer=?, spawn=?, killable=?, time_submitted=?, submitter_name=? ".
-				"WHERE mob_name=?",
-				$timeUntilSpawn,
-				time() + $timeUntilSpawn,
-				time() + $timeUntilKillable,
-				time(),
-				$sender,
-				$mobName
+		$this->db->table("bigboss_timers")
+			->upsert(
+				[
+					"mob_name" => $mobName,
+					"timer" => $timeUntilSpawn,
+					"spawn" => time() + $timeUntilSpawn,
+					"killable" => time() + $timeUntilKillable,
+					"time_submitted" => time(),
+					"submitter_name" => $sender,
+				],
+				["mob_name"]
 			);
-		} else {
-			$this->db->exec(
-				"INSERT INTO bigboss_timers ".
-				"(mob_name, timer, spawn, killable, time_submitted, submitter_name) ".
-				"VALUES (?, ?, ?, ?, ?, ?)",
-				$mobName,
-				$timeUntilSpawn,
-				time() + $timeUntilSpawn,
-				time() + $timeUntilKillable,
-				time(),
-				$sender
-			);
-		}
 		$msg = "The timer for <highlight>$mobName<end> has been updated.";
 		return $msg;
 	}
 
 	public function bigBossUpdateCommand(string $sender, string $arg, string $mobName, int $downTime, int $timeUntilKillable): string {
-		$data = $this->getBigBossTimer($mobName);
 		$newKillTime = $this->util->parseTime($arg);
 		if ($newKillTime < 1) {
 			$msg = "You must enter a valid time parameter for the time until <highlight>${mobName}<end> will be vulnerable.";
 			return $msg;
 		}
 		$newKillTime += time();
-
-		if ($data) {
-			$this->db->exec(
-				"UPDATE bigboss_timers SET ".
-				"timer=?, spawn=?, killable=?, time_submitted=?, submitter_name=? ".
-				"WHERE mob_name=?",
-				$downTime,
-				$newKillTime-$timeUntilKillable,
-				$newKillTime,
-				time(),
-				$sender,
-				$mobName
+		$this->db->table("bigboss_timers")
+			->upsert(
+				[
+					"mob_name" => $mobName,
+					"timer" => $downTime,
+					"spawn" => $newKillTime-$timeUntilKillable,
+					"killable" => $newKillTime,
+					"time_submitted" => time(),
+					"submitter_name" => $sender,
+				],
+				["mob_name"]
 			);
-		} else {
-			$this->db->exec(
-				"INSERT INTO bigboss_timers ".
-				"(mob_name, timer, spawn, killable, time_submitted, submitter_name) ".
-				"VALUES (?, ?, ?, ?, ?, ?)",
-				$mobName,
-				$downTime,
-				$newKillTime-$timeUntilKillable,
-				$newKillTime,
-				time(),
-				$sender
-			);
-		}
 		$msg = "The timer for <highlight>$mobName<end> has been updated.";
 		return $msg;
 	}
