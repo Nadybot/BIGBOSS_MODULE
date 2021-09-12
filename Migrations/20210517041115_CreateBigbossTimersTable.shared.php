@@ -6,10 +6,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Nadybot\Core\DB;
 use Nadybot\Core\LoggerWrapper;
 use Nadybot\Core\SchemaMigration;
+use Nadybot\User\Modules\BIGBOSS_MODULE\BigBossController;
 
 class CreateBigbossTimersTable implements SchemaMigration {
 	public function migrate(LoggerWrapper $logger, DB $db): void {
-		$table = "bigboss_timers";
+		$table = BigBossController::DB_TABLE;
 		if ($db->schema()->hasTable($table)) {
 			return;
 		}
