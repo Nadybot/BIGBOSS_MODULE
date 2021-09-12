@@ -37,11 +37,13 @@ class MigrateToRoutes implements SchemaMigration {
 			$this->installRoutes($db, "*-spawn", $spawnAlert);
 			$this->installRoutes($db, "*-vulnerable", $vulnAlert);
 		}
-		$routeFormat = new RouteHopFormat();
-		$routeFormat->hop = "spawn";
-		$routeFormat->render = false;
-		$db->insert(Source::DB_TABLE, $routeFormat);
-		$this->messageHub->loadTagFormat();
+		if (!$db->table(Source::DB_TABLE)->where("hop", "spawn")->exists()) {
+			$routeFormat = new RouteHopFormat();
+			$routeFormat->hop = "spawn";
+			$routeFormat->render = false;
+			$db->insert(Source::DB_TABLE, $routeFormat);
+			$this->messageHub->loadTagFormat();
+		}
 	}
 
 	protected function installRoutes(DB $db, string $event, int $value): void {
