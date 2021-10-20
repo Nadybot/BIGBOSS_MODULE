@@ -486,4 +486,36 @@ class BigBossController {
 			}
 		}
 	}
+
+	/**
+	 * @NewsTile("boss-timers")
+	 * @Description("A list of upcoming boss spawn timers")
+	 */
+	public function bossTimersNewsTile(string $sender, callable $callback): void {
+		$timers = $this->getBigBossTimers();
+		if (!count($timers)) {
+			$callback(null);
+			return;
+		}
+		$blob = "<header2>Boss timers<end>";
+		foreach ($timers as $timer) {
+			$blob .= "\n<tab>" . $this->formatBigBossMessage($timer, true);
+		}
+		$callback($blob);
+	}
+
+	/**
+	 * @NewsTile("tara-timer")
+	 * @Description("The current tara timer")
+	 */
+	public function taraTimerNewsTile(string $sender, callable $callback): void {
+		$timer = $this->getBigBossTimer(static::TARA);
+		if (!isset($timer)) {
+			$callback(null);
+			return;
+		}
+		$blob = "<header2>Tara timer<end>\n".
+			"<tab>" . $this->formatBigBossMessage($timer, true);
+		$callback($blob);
+	}
 }
